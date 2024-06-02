@@ -1,11 +1,13 @@
 import numpy as np
 import torch
 
+
 def normalization(data_array):
     min_val = np.min(data_array)
     max_val = np.max(data_array)
     scaled = (data_array - min_val) / (max_val - min_val)
     return scaled
+
 
 def create_dataset(dataset, lookback):
     X, y = [], []
