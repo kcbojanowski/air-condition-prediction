@@ -1,34 +1,74 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import BackgroundTasks, WebSocket, APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.db.database import SessionLocal, AirQualityData
-from app.core.model import model
-from app.core.data_processing import normalization, create_dataset
+import torch
+import json
 import numpy as np
+# from app.db.database import SessionLocal, AirQualityData
+from app.core.model import ModelInstance
+from app.core.train_model import train_model
+from app.core.data_processing import normalization, create_dataset
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_json, col
+from pyspark.sql.types import StructType, StructField, StringType, FloatType
+
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
+
+# Tworzymy sesję Spark
+spark = SparkSession.builder.appName("AirQualityApp").getOrCreate()
+
+# Definiujemy schemat dla danych PM10
+schema = StructType([
+    StructField("timestamp", StringType(), True),
+    StructField("pm10", FloatType(), True)
+])
+
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
+
+
+@router.post("/train")
+async def train(background_tasks: BackgroundTasks):
+    background_tasks.add_task(train_model)
+    return {"status": "Training started"}
+
+@router.post("/evaluate")
+async def evaluate():
+    data = np.random.rand(1000)  # Przykladowe dane
+    data_normalized = normalization(data)
+    lookback = 3
+    X, y = create_dataset(data_normalized, lookback)
+    X = torch.from_numpy(X).float()
+    y = torch.from_numpy(y).float()
+
+    model_instance = ModelInstance()
+    metrics = model_instance.evaluate_model(X, y)
+
+    return metrics
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    data = []
+    await websocket.accept()
     try:
-        yield db
+        while True:
+            msg = await websocket.receive_text()
+            msg_json = json.loads(msg)
+            data.append(msg_json['pm10'])
+    except Exception as e:
+        print(f"Error: {e}")
     finally:
-        db.close()
-
-@router.post("/ingest")
-async def ingest_data(pm10: float, timestamp: str, db: Session = Depends(get_db)):
-    normalized_data = normalization(np.array([pm10]))
-    new_data = AirQualityData(pm10=pm10, timestamp=timestamp, prediction=None)
-    db.add(new_data)
-    db.commit()
-    return {"status": "success"}
-
-@router.post("/predict")
-async def predict_data(pm10: float):
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    normalized_data = normalization(np.array([pm10]))
-    X, _ = create_dataset(normalized_data, lookback=3)
-    X = X.to(device)
-
-    with torch.no_grad():
-        prediction = model(X)
-    return {"prediction": prediction.cpu().numpy()}
+        print("Otrzymane dane PM10:", data)
+        model_instance = ModelInstance()
+        normalized_data = normalization(np.array([data]))
+        X, _ = create_dataset(normalized_data, lookback=3)
+        X = X.to(model_instance.device)
+        
+        with torch.no_grad():
+            prediction = model_instance.model(X)
+        return {"prediction": prediction.cpu().numpy()}
