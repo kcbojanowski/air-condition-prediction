@@ -1,3 +1,4 @@
+import random
 import time
 from fastapi import BackgroundTasks, WebSocket, APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -41,16 +42,8 @@ async def build_train(background_tasks: BackgroundTasks):
 
 @router.post("/evaluate")
 async def evaluate():
-    data = np.random.rand(1000)  # Przykladowe dane
-    data_normalized = normalization(data)
-    lookback = 3
-    X, y = create_dataset(data_normalized, lookback)
-    X = torch.from_numpy(X).float()
-    y = torch.from_numpy(y).float()
-
     model_instance = ModelInstance()
-    metrics = model_instance.evaluate_model(X, y)
-
+    metrics = model_instance.evaluate_model()
     return metrics
 
 @router.websocket("/ws")

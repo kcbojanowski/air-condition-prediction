@@ -11,10 +11,14 @@ from app.core.data_processing import normalization, create_dataset
 from app.core.config import settings
 
 async def build_and_train():
-    data = pd.read_csv('data/Alaska_PM10_one_site.csv')
-    data_normalized = normalization(data['PM10'].astype(float).values)
+    df = pd.read_csv('data/Alaska_PM10_one_site.csv')
+    data = df["PM10"].astype(float).values
+    train_size = int(len(data) * 0.8)
+    data_normalized = normalization(data[:train_size])
+
     lookback = 3
     epochs = 10
+    
     X, y = create_dataset(data_normalized, lookback)
     
     dataset = TensorDataset(X, y)
