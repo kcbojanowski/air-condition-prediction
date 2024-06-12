@@ -25,6 +25,7 @@ async def generate_air_quality_data():
             pm10_value = round(random.uniform(10, 150), 2)
             
             data = {
+                "timestamp": current_date.strftime("%Y-%m-%d %H:%M:%S"),
                 "pm10": pm10_value
             }
             
@@ -48,6 +49,7 @@ def generate_data():
     """Generate air quality data."""
     asyncio.run(generate_air_quality_data())
     console.print("Data generation completed.")
+
 
 if __name__ == "__main__":
     cli()

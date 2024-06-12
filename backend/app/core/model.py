@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import pandas as pd
-from app.core.data_processing import create_dataset, normalization
+from app.core.data_processing import create_dataset, Normalizer
 from app.core.config import settings
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error, roc_auc_score
 from torch.utils.data import DataLoader, TensorDataset
@@ -41,7 +41,10 @@ class ModelInstance():
         train_size = int(len(data) * 0.8)
         test_data = data[train_size:]
 
-        data_normalized = normalization(test_data)
+        normalizer = Normalizer()
+        normalizer.fit(test_data)
+        data_normalized = normalizer.transform(test_data)
+
         lookback = 3
         X, y = create_dataset(data_normalized, lookback)
 

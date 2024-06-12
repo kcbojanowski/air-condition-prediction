@@ -7,18 +7,20 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from app.core.model import AirModelGRU
-from app.core.data_processing import normalization, create_dataset
+from app.core.data_processing import Normalizer, create_dataset
 from app.core.config import settings
 
 async def build_and_train():
     df = pd.read_csv('data/Alaska_PM10_one_site.csv')
     data = df["PM10"].astype(float).values
     train_size = int(len(data) * 0.8)
-    data_normalized = normalization(data[:train_size])
+    normalizer = Normalizer()
+    normalizer.fit(data[:train_size])
+    data_normalized = normalizer.transform(data[:train_size])
 
     lookback = 3
     epochs = 10
-    
+
     X, y = create_dataset(data_normalized, lookback)
     
     dataset = TensorDataset(X, y)
