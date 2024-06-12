@@ -1,3 +1,4 @@
+import time
 from fastapi import BackgroundTasks, WebSocket, APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import torch
@@ -5,7 +6,7 @@ import json
 import numpy as np
 # from app.db.database import SessionLocal, AirQualityData
 from app.core.model import ModelInstance
-from app.core.train_model import train_model
+from app.core.train_model import build_and_train
 from app.core.data_processing import normalization, create_dataset
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col
@@ -24,18 +25,19 @@ schema = StructType([
     StructField("pm10", FloatType(), True)
 ])
 
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
 
+@router.post("/build-and-train")
+async def build_train(background_tasks: BackgroundTasks):
+    start_time = time.time()  
+    await build_and_train()  
+    end_time = time.time()  
+    elapsed_time = end_time - start_time
 
-@router.post("/train")
-async def train(background_tasks: BackgroundTasks):
-    background_tasks.add_task(train_model)
-    return {"status": "Training started"}
+    return {
+        "status": "Model building and training completed",
+        "time_taken": elapsed_time
+    }
+    
 
 @router.post("/evaluate")
 async def evaluate():

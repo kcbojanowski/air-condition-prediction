@@ -25,7 +25,6 @@ async def generate_air_quality_data():
             pm10_value = round(random.uniform(10, 150), 2)
             
             data = {
-                "timestamp": current_date.strftime("%Y-%m-%d %H:%M:%S"),
                 "pm10": pm10_value
             }
             
@@ -35,7 +34,7 @@ async def generate_air_quality_data():
 @cli.command()
 def train_model():
     """Trigger model training."""
-    response = httpx.post(f"{API_URL}/train")
+    response = httpx.post(f"{API_URL}/build-and-train")
     console.print(response.json())
 
 @cli.command()
