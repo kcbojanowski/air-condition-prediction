@@ -9,7 +9,7 @@ import json
 import websockets
 
 console = Console()
-API_URL = "http://localhost:8000/api"
+API_URL = "http://backend:8000/api"
 
 
 sent_data = []
@@ -21,7 +21,7 @@ def cli():
 async def generate_air_quality_data():
     base_date = datetime.now() - timedelta(days=30)
     
-    async with websockets.connect("ws://localhost:8000/ws") as websocket:
+    async with websockets.connect("ws://backend:8000/ws") as websocket:
         start_time = time.time()
         while time.time() - start_time < 15:
             current_date = base_date + timedelta(days=random.randint(0, 30))
