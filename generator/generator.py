@@ -138,8 +138,8 @@ def get_predictions():
     table.add_column("Prediction", style="magenta")
     today = datetime.today()
     
-    for i in range(1, 6):
-        date = today + timedelta(days=i)
+    for i in range(5):
+        date = today + timedelta(days=i + 1)
         formatted_date = date.strftime("%Y-%m-%d")
         prediction = round(response_data["data"][i], 2)
         table.add_row(formatted_date, str(prediction))
