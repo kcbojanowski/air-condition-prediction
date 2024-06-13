@@ -25,7 +25,6 @@ spark = SparkSession.builder.appName("AirQualityApp").getOrCreate()
 
 # Definiujemy schemat dla danych PM10
 schema = StructType([
-    StructField("timestamp", StringType(), True),
     StructField("pm10", FloatType(), True)
 ])
 
@@ -33,7 +32,9 @@ data_storage = []
 
 @router.post("/get-predictions")
 async def get_predictions():
-    return {"Predictions for the next 5 days": data_storage}
+    return_message = {"Predictions for the next 5 days": data_storage}
+    data_storage.clear()
+    return return_message
 
 
 @router.post("/build-and-train")
@@ -62,18 +63,17 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             msg = await websocket.receive_text()
             msg_json = json.loads(msg)
-            data.append(msg_json['pm10'])
+            data.append(float(msg_json['pm10']))
     except Exception as e:
         pass
     finally:
-        print("Received PM10 data:", data_storage)
-        process_data(data_storage)
+        process_data(data)
+        print("Received PM10 data:", data)
         
 
-def process_data(data_storage):
-    
-    # Create a Spark DataFrame from the data storage
-    rdd = spark.sparkContext.parallelize(data_storage)
+def process_data(data):
+    data = [(float(x),) for x in data]
+    rdd = spark.sparkContext.parallelize(data)
     df = spark.createDataFrame(rdd, schema)
 
     # Process the data with Spark
