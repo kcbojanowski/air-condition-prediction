@@ -32,7 +32,7 @@ data_storage = []
 
 @router.post("/get-predictions")
 async def get_predictions():
-    return_message = {"Predictions for the next 5 days": data_storage}
+    return_message = {"Predictions for the next 5 days": data_storage.copy()}
     data_storage.clear()
     return return_message
 

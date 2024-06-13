@@ -10,6 +10,7 @@ import websockets
 
 console = Console()
 API_URL = "http://backend:8000/api"
+TIMEOUT = 50.0
 
 
 sent_data = []
@@ -40,13 +41,13 @@ async def generate_air_quality_data():
 @cli.command()
 def train_model():
     """Trigger model training."""
-    response = httpx.post(f"{API_URL}/build-and-train")
+    response = httpx.post(f"{API_URL}/build-and-train", timeout=TIMEOUT)
     console.print(response.json())
 
 @cli.command()
 def evaluate_model():
     """Evaluate the model."""
-    response = httpx.post(f"{API_URL}/evaluate")
+    response = httpx.post(f"{API_URL}/evaluate", timeout=TIMEOUT)
     console.print(response.json())
 
 @cli.command()
@@ -59,7 +60,7 @@ def generate_data():
 @cli.command()
 def get_predictions():
     """Get air quality predictions for the next 5 days"""
-    response = httpx.post(f"{API_URL}/get-predictions")
+    response = httpx.post(f"{API_URL}/get-predictions", timeout=TIMEOUT)
     console.print(response.json())
 
 
