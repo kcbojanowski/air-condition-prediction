@@ -56,3 +56,5 @@ async def build_and_train():
     print(f"Epoch {epoch+1}, Train Loss: {train_loss:.4f}")
     
     torch.save(model.state_dict(), os.environ['MODEL_PATH'])
+
+    return train_loss

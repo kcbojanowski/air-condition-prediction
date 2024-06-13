@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 import torch
 import json
 import numpy as np
-# from app.db.database import SessionLocal, AirQualityData
 from app.core.model import ModelInstance
 from app.core.train_model import build_and_train
 from app.core.data_processing import Normalizer, create_dataset
@@ -17,13 +16,10 @@ from torch.utils.data import DataLoader, TensorDataset
 app = FastAPI()
 router = APIRouter()
 
-
 predictions= []
 
-# Tworzymy sesję Spark
 spark = SparkSession.builder.appName("AirQualityApp").getOrCreate()
 
-# Definiujemy schemat dla danych PM10
 schema = StructType([
     StructField("pm10", FloatType(), True)
 ])
@@ -32,21 +28,25 @@ data_storage = []
 
 @router.post("/get-predictions")
 async def get_predictions():
-    return_message = {"Predictions for the next 5 days": data_storage.copy()}
-    data_storage.clear()
+    print(f"Predictions: {data_storage.copy()}")
+    return_message = {
+        "data": data_storage.copy(),
+        "text": "Predictions for the next 5 days"
+    }
     return return_message
 
 
 @router.post("/build-and-train")
 async def build_train(background_tasks: BackgroundTasks):
     start_time = time.time()  
-    await build_and_train()  
+    train_loss = await build_and_train()  
     end_time = time.time()  
     elapsed_time = end_time - start_time
 
     return {
         "status": "Model building and training completed",
-        "time_taken": elapsed_time
+        "time_taken": elapsed_time,
+        "train_loss": train_loss
     }
 
 @router.post("/evaluate")
@@ -72,11 +72,10 @@ async def websocket_endpoint(websocket: WebSocket):
         
 
 def process_data(data):
+    data_storage.clear()
     data = [(float(x),) for x in data]
     rdd = spark.sparkContext.parallelize(data)
     df = spark.createDataFrame(rdd, schema)
-
-    # Process the data with Spark
     pm10_values = df.select("pm10").rdd.flatMap(lambda x: x).collect()
     model_instance = ModelInstance()
     normalizer = Normalizer()
