@@ -33,7 +33,7 @@ data_storage = []
 
 @router.post("/get-predictions")
 async def get_predictions():
-    return {"data": data_storage}
+    return {"Predictions for the next 5 days": data_storage}
 
 
 @router.post("/build-and-train")
@@ -66,25 +66,36 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         pass
     finally:
-        print("Otrzymane dane PM10:", data)
-        model_instance = ModelInstance()
-        normalizer = Normalizer()
-        normalizer.fit(np.array(data))
-        normalized_data = normalizer.transform(np.array(data))
-
-        lookback = 3
-        X, y = create_dataset(normalized_data, lookback)
-
-        dataset = TensorDataset(X, y)
-        dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
-        predictions = []
-
-        with torch.no_grad():
-            for batch in dataloader:
-                X_batch = batch[0].to(model_instance.device)
-                y_pred = model_instance.model(X_batch)
-                predictions.extend(y_pred.cpu().numpy())
-
-        predictions = normalizer.inverse_transform(np.array(predictions)).flatten()        
-        print("Predictions for the next 5 days:", predictions[:5])
+        print("Received PM10 data:", data_storage)
+        process_data(data_storage)
         
+
+def process_data(data_storage):
+    
+    # Create a Spark DataFrame from the data storage
+    rdd = spark.sparkContext.parallelize(data_storage)
+    df = spark.createDataFrame(rdd, schema)
+
+    # Process the data with Spark
+    pm10_values = df.select("pm10").rdd.flatMap(lambda x: x).collect()
+    model_instance = ModelInstance()
+    normalizer = Normalizer()
+    normalizer.fit(np.array(pm10_values))
+    normalized_data = normalizer.transform(np.array(pm10_values))
+
+    lookback = 3
+    X, y = create_dataset(normalized_data, lookback)
+
+    dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32))
+    dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
+    predictions = []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            X_batch = batch[0].to(model_instance.device)
+            y_pred = model_instance.model(X_batch)
+            predictions.extend(y_pred.cpu().numpy())
+
+    predictions = normalizer.inverse_transform(np.array(predictions)).flatten() 
+    for p in predictions[:5]:
+        data_storage.append(float(p))

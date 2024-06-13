@@ -9,7 +9,7 @@ import json
 import websockets
 
 console = Console()
-API_URL = "http://localhost:8000/api"
+API_URL = "http://backend:8000"
 
 @click.group()
 def cli():
@@ -18,7 +18,7 @@ def cli():
 async def generate_air_quality_data():
     base_date = datetime.now() - timedelta(days=30)
     
-    async with websockets.connect("ws://localhost:8000/ws") as websocket:
+    async with websockets.connect("ws://backend:8000/ws") as websocket:
         start_time = time.time()
         while time.time() - start_time < 15:
             current_date = base_date + timedelta(days=random.randint(0, 30))
@@ -30,7 +30,7 @@ async def generate_air_quality_data():
             }
             
             await websocket.send(json.dumps(data))
-            await asyncio.sleep(1)  # symuluje generowanie danych co sekundę
+            await asyncio.sleep(1)
 
 @cli.command()
 def train_model():
@@ -49,6 +49,12 @@ def generate_data():
     """Generate air quality data."""
     asyncio.run(generate_air_quality_data())
     console.print("Data generation completed.")
+
+@cli.command()
+def get_predictions():
+    """Get air quality predictions for the next 5 days"""
+    response = httpx.post(f"{API_URL}/get-predictions")
+    console.print(response.json())
 
 
 if __name__ == "__main__":

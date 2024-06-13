@@ -3,10 +3,12 @@ import torch
 import torch.nn as nn
 import pandas as pd
 from app.core.data_processing import create_dataset, Normalizer
-from app.core.config import settings
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error, roc_auc_score
 from torch.utils.data import DataLoader, TensorDataset
-
+from pyspark.sql import SparkSession
+from pyspark.sql.types import FloatType
+from pyspark.sql.functions import col
+import os
 
 class AirModelGRU(nn.Module):
     def __init__(self, hidden_size, num_layers):
@@ -24,20 +26,23 @@ class ModelInstance():
     def __init__(self):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.model = self.load_model()
-        
+        self.spark = SparkSession.builder.appName("AirQualityApp").getOrCreate()
+
 
     def load_model(self):
         hidden_size = 100
         num_layers = 2
         model = AirModelGRU(hidden_size, num_layers).to(self.device)
-        model.load_state_dict(torch.load(settings.model_path, map_location=self.device))
+        model.load_state_dict(torch.load(os.environ['MODEL_PATH'], map_location=self.device))
         model.eval()
         return model
 
 
     def evaluate_model(self):
-        df = pd.read_csv('data/Alaska_PM10_one_site.csv')
-        data = df["PM10"].astype(float).values
+        df = self.spark.read.csv('data/Alaska_PM10_one_site.csv', header=True, inferSchema=True)
+        data = np.array(df.select(col("PM10").cast(FloatType())).rdd.flatMap(lambda x: x).collect())
+        
+
         train_size = int(len(data) * 0.8)
         test_data = data[train_size:]
 
@@ -71,11 +76,9 @@ class ModelInstance():
         rmse = np.sqrt(mse).item()
 
         metrics = {
-           
             "mae": mae,
             "mse": mse,
             "rmse": rmse,
-            
         }
 
         return metrics

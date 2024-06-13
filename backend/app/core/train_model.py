@@ -1,18 +1,27 @@
 import pandas as pd
+import numpy as np
+import os
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
+from pyspark.sql import SparkSession
+from pyspark.sql.types import FloatType
+from pyspark.sql.functions import col
+
+from tqdm import tqdm
 from app.core.model import AirModelGRU
 from app.core.data_processing import Normalizer, create_dataset
-from app.core.config import settings
+
+spark = SparkSession.builder.appName("AirQualityApp").getOrCreate()
+
 
 async def build_and_train():
-    df = pd.read_csv('data/Alaska_PM10_one_site.csv')
-    data = df["PM10"].astype(float).values
+    df = spark.read.csv('data/Alaska_PM10_one_site.csv', header=True, inferSchema=True)
+    data = np.array(df.select(col("PM10").cast(FloatType())).rdd.flatMap(lambda x: x).collect())
+
     train_size = int(len(data) * 0.8)
     normalizer = Normalizer()
     normalizer.fit(data[:train_size])
@@ -46,4 +55,4 @@ async def build_and_train():
     train_loss /= len(dataloader.dataset)
     print(f"Epoch {epoch+1}, Train Loss: {train_loss:.4f}")
     
-    torch.save(model.state_dict(), settings.model_path)
+    torch.save(model.state_dict(), os.environ['MODEL_PATH'])

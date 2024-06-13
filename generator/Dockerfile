@@ -1,10 +1,15 @@
-# Dockerfile for data generator
-FROM python:3.10-slim
+FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY generator.py /app/generator.py
+COPY requirements.txt .
 
-RUN pip install websockets
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install websockets httpx rich click
 
-CMD ["python", "generator.py"]
+COPY . .
+
+EXPOSE 5000
+
+ENTRYPOINT ["python", "generator.py"]
+CMD ["--help"]

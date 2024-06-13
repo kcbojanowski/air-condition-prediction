@@ -3,5 +3,7 @@ fastapi~=0.111.0
 SQLAlchemy~=2.0.30
 MyApplication~=0.1.0
 torch~=2.3.0
-pydantic~=2.7.2
 uvicorn~=0.30.1
+pandas~=2.2.2
+httpx~=0.27.0
+os
